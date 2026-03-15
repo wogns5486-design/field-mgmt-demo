@@ -1,0 +1,16 @@
+{
+  "name": "field-mgmt-demo",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w packages/backend",
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "build:frontend": "npm run build -w packages/frontend",
+    "db:init": "cd packages/backend && wrangler d1 execute field-mgmt-db --local --file=schema.sql",
+    "db:seed": "cd packages/backend && wrangler d1 execute field-mgmt-db --local --file=seed.sql"
+  }
+}

@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "field-mgmt-db"
-database_id = "local"
+database_id = "d3de804e-b229-45c2-9f88-f14f4700b7e5"
 
 [[r2_buckets]]
 binding = "STORAGE"

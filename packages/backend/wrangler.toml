@@ -14,3 +14,11 @@ bucket_name = "field-mgmt-photos"
 
 [vars]
 CORS_ORIGIN = "*"
+JWT_SECRET = "dev-secret-change-in-production"
+
+[env.production]
+name = "field-mgmt-api-prod"
+
+[env.production.vars]
+CORS_ORIGIN = "https://field-mgmt.example.com"
+JWT_SECRET = "CHANGE_ME_IN_PRODUCTION"

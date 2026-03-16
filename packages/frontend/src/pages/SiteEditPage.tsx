@@ -1,21 +1,37 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { DEFAULT_CHECKLIST_ITEMS } from '@/lib/constants';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, RefreshCw } from 'lucide-react';
 
-export function SiteCreatePage() {
+export function SiteEditPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [checklistItems, setChecklistItems] = useState<string[]>([
-    ...DEFAULT_CHECKLIST_ITEMS,
-  ]);
-  const [workers, setWorkers] = useState<{ name: string; phone: string }[]>([
-    { name: '', phone: '' },
-  ]);
+  const [checklistItems, setChecklistItems] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchSite = async () => {
+      try {
+        const site = await api.getSite(Number(id));
+        setName(site.name);
+        setAddress(site.address);
+        const items = typeof site.checklist_items === 'string'
+          ? JSON.parse(site.checklist_items)
+          : site.checklist_items;
+        setChecklistItems(items || []);
+      } catch (err: any) {
+        toast.error(err.message || '현장 정보를 불러올 수 없습니다');
+        navigate('/dashboard');
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchSite();
+  }, [id, navigate]);
 
   const addChecklistItem = () => setChecklistItems([...checklistItems, '']);
   const removeChecklistItem = (idx: number) =>
@@ -23,50 +39,48 @@ export function SiteCreatePage() {
   const updateChecklistItem = (idx: number, val: string) =>
     setChecklistItems(checklistItems.map((item, i) => (i === idx ? val : item)));
 
-  const addWorker = () => setWorkers([...workers, { name: '', phone: '' }]);
-  const removeWorker = (idx: number) =>
-    setWorkers(workers.filter((_, i) => i !== idx));
-  const updateWorker = (idx: number, field: 'name' | 'phone', val: string) =>
-    setWorkers(workers.map((w, i) => (i === idx ? { ...w, [field]: val } : w)));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !address) return;
 
     setLoading(true);
     try {
-      const validWorkers = workers.filter((w) => w.name.trim());
       const validChecklist = checklistItems.filter((item) => item.trim());
-
-      const site = await api.createSite({
+      await api.updateSite(Number(id), {
         name,
         address,
         checklist_items: validChecklist,
-        workers: validWorkers,
       });
-      toast.success('현장이 등록되었습니다');
-      navigate(`/sites/${site.id}`);
+      toast.success('현장 정보가 수정되었습니다');
+      navigate(`/sites/${id}`);
     } catch (err: any) {
-      toast.error(err.message || '오류가 발생했습니다');
+      toast.error(err.message || '수정 중 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
   };
 
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate(`/sites/${id}`)}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         뒤로
       </button>
 
-      <h1 className="text-2xl font-bold mb-6">현장 등록</h1>
+      <h1 className="text-2xl font-bold mb-6">현장 수정</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
         <div className="bg-white rounded-xl border p-6 space-y-4">
           <h2 className="font-semibold text-lg">기본 정보</h2>
           <div>
@@ -91,7 +105,6 @@ export function SiteCreatePage() {
           </div>
         </div>
 
-        {/* Checklist */}
         <div className="bg-white rounded-xl border p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg">안전점검 항목</h2>
@@ -125,54 +138,12 @@ export function SiteCreatePage() {
           </div>
         </div>
 
-        {/* Workers */}
-        <div className="bg-white rounded-xl border p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">작업자 등록</h2>
-            <button
-              type="button"
-              onClick={addWorker}
-              className="flex items-center gap-1 text-sm text-primary hover:underline"
-            >
-              <Plus className="w-4 h-4" />
-              작업자 추가
-            </button>
-          </div>
-          <div className="space-y-3">
-            {workers.map((w, idx) => (
-              <div key={idx} className="flex gap-2">
-                <input
-                  value={w.name}
-                  onChange={(e) => updateWorker(idx, 'name', e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  placeholder="이름"
-                />
-                <input
-                  value={w.phone}
-                  onChange={(e) => updateWorker(idx, 'phone', e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  placeholder="전화번호 (선택)"
-                />
-                {workers.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeWorker(idx)}
-                    className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         <button
           type="submit"
           disabled={loading}
           className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {loading ? '등록 중...' : '현장 등록'}
+          {loading ? '수정 중...' : '현장 수정'}
         </button>
       </form>
     </div>

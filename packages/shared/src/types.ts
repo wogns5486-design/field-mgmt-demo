@@ -65,3 +65,22 @@ export interface SiteWithStats extends Site {
 export interface SubmissionWithWorker extends Submission {
   worker_name: string;
 }
+
+export interface SiteDetail extends Site {
+  workers: Worker[];
+  submissions: SubmissionWithWorker[];
+  submission_total?: number;
+}
+
+export interface UpdateWorkerRequest {
+  name: string;
+  phone?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

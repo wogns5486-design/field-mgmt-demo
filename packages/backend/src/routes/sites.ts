@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import { nanoid } from 'nanoid';
 import type { Env } from '../index';
 import { authMiddleware } from '../middleware/auth';
+import { createSiteSchema, updateSiteSchema, addWorkersSchema, paginationSchema } from '@field-mgmt/shared';
 
 export const sitesRoutes = new Hono<Env>();
 
@@ -19,8 +21,8 @@ sitesRoutes.get('/', authMiddleware, async (c) => {
 });
 
 // POST /api/sites - Create site with workers
-sitesRoutes.post('/', authMiddleware, async (c) => {
-  const { name, address, checklist_items, workers } = await c.req.json();
+sitesRoutes.post('/', authMiddleware, zValidator('json', createSiteSchema), async (c) => {
+  const { name, address, checklist_items, workers } = c.req.valid('json');
   const shortUrl = nanoid(8).toLowerCase();
 
   const siteResult = await c.env.DB.prepare(
@@ -93,22 +95,28 @@ sitesRoutes.get('/:id', authMiddleware, async (c) => {
     JOIN workers w ON sub.worker_id = w.id
     WHERE sub.site_id = ?
     ORDER BY sub.submitted_at DESC
+    LIMIT 20
   `)
     .bind(id)
     .all();
+
+  const submissionCount = await c.env.DB.prepare(
+    'SELECT COUNT(*) as count FROM submissions WHERE site_id = ?'
+  ).bind(id).first();
 
   return c.json({
     ...site,
     checklist_items: JSON.parse(site.checklist_items as string),
     workers: workers.results,
     submissions: submissions.results,
+    submission_total: (submissionCount?.count as number) || 0,
   });
 });
 
 // PUT /api/sites/:id - Update site
-sitesRoutes.put('/:id', authMiddleware, async (c) => {
+sitesRoutes.put('/:id', authMiddleware, zValidator('json', updateSiteSchema), async (c) => {
   const id = c.req.param('id');
-  const { name, address, checklist_items } = await c.req.json();
+  const { name, address, checklist_items } = c.req.valid('json');
 
   const result = await c.env.DB.prepare(
     'UPDATE sites SET name = ?, address = ?, checklist_items = ? WHERE id = ? RETURNING *'
@@ -138,9 +146,9 @@ sitesRoutes.get('/:id/workers', authMiddleware, async (c) => {
 });
 
 // POST /api/sites/:id/workers - Add workers
-sitesRoutes.post('/:id/workers', authMiddleware, async (c) => {
+sitesRoutes.post('/:id/workers', authMiddleware, zValidator('json', addWorkersSchema), async (c) => {
   const siteId = c.req.param('id');
-  const { workers } = await c.req.json();
+  const { workers } = c.req.valid('json');
 
   const stmt = c.env.DB.prepare(
     'INSERT INTO workers (name, phone, site_id) VALUES (?, ?, ?)'
@@ -153,17 +161,38 @@ sitesRoutes.post('/:id/workers', authMiddleware, async (c) => {
   return c.json({ success: true }, 201);
 });
 
-// GET /api/sites/:id/submissions - List submissions
+// GET /api/sites/:id/submissions - List submissions (paginated)
 sitesRoutes.get('/:id/submissions', authMiddleware, async (c) => {
   const id = c.req.param('id');
-  const submissions = await c.env.DB.prepare(`
-    SELECT sub.*, w.name as worker_name
-    FROM submissions sub
-    JOIN workers w ON sub.worker_id = w.id
-    WHERE sub.site_id = ?
-    ORDER BY sub.submitted_at DESC
-  `)
-    .bind(id)
-    .all();
-  return c.json(submissions.results);
+  const page = Number(c.req.query('page') || '1');
+  const limit = Number(c.req.query('limit') || '20');
+  const offset = (page - 1) * limit;
+
+  const [submissions, countResult] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT sub.*, w.name as worker_name
+      FROM submissions sub
+      JOIN workers w ON sub.worker_id = w.id
+      WHERE sub.site_id = ?
+      ORDER BY sub.submitted_at DESC
+      LIMIT ? OFFSET ?
+    `)
+      .bind(id, limit, offset)
+      .all(),
+    c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM submissions WHERE site_id = ?'
+    )
+      .bind(id)
+      .first(),
+  ]);
+
+  const total = (countResult?.count as number) || 0;
+
+  return c.json({
+    data: submissions.results,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  });
 });

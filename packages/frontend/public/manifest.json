@@ -1,0 +1,17 @@
+{
+  "name": "현장 관리 솔루션",
+  "short_name": "현장관리",
+  "description": "B2B 현장 안전점검 관리 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

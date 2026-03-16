@@ -9,6 +9,4 @@ export const DEFAULT_CHECKLIST_ITEMS = [
   '안전난간 설치 확인',
 ];
 
-export const DEMO_TOKEN = 'demo-token-2026';
-
 export const API_PREFIX = '/api';

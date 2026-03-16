@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2 } from 'lucide-react';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       await login(username, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || '로그인에 실패했습니다');
+      toast.error(err.message || '로그인에 실패했습니다');
     } finally {
       setLoading(false);
     }
@@ -60,12 +59,6 @@ export function LoginPage() {
                 required
               />
             </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">
-                {error}
-              </div>
-            )}
 
             <button
               type="submit"

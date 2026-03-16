@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SiteCreatePage } from './pages/SiteCreatePage';
 import { SiteDetailPage } from './pages/SiteDetailPage';
+import { SiteEditPage } from './pages/SiteEditPage';
 import { WorkerFormPage } from './pages/WorkerFormPage';
 import { Layout } from './components/Layout';
 import { useAuth } from './hooks/useAuth';
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="sites/new" element={<SiteCreatePage />} />
           <Route path="sites/:id" element={<SiteDetailPage />} />
+          <Route path="sites/:id/edit" element={<SiteEditPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

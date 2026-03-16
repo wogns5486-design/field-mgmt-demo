@@ -1,3 +1,5 @@
+import type { SiteWithStats, SiteDetail, Worker, SubmissionWithWorker } from '@field-mgmt/shared';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function getToken(): string | null {
@@ -36,13 +38,17 @@ async function request<T>(
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: '요청 실패' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({ error: { message: '요청 실패' } }));
+    const message = body.error?.message || body.error || `HTTP ${res.status}`;
+    const error = new Error(message);
+    (error as any).status = res.status;
+    (error as any).code = body.error?.code;
+    throw error;
   }
 
   // Handle CSV/blob responses
   const contentType = res.headers.get('Content-Type') || '';
-  if (contentType.includes('text/csv')) {
+  if (contentType.includes('text/csv') || contentType.includes('spreadsheetml') || contentType.includes('octet-stream')) {
     return res.blob() as unknown as T;
   }
 
@@ -58,7 +64,7 @@ export const api = {
     }),
 
   // Sites
-  getSites: () => request<any[]>('/api/sites'),
+  getSites: () => request<SiteWithStats[]>('/api/sites'),
 
   createSite: (data: {
     name: string;
@@ -66,32 +72,48 @@ export const api = {
     checklist_items: string[];
     workers: { name: string; phone?: string }[];
   }) =>
-    request<any>('/api/sites', {
+    request<SiteWithStats>('/api/sites', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getSite: (id: number) => request<any>(`/api/sites/${id}`),
+  getSite: (id: number) => request<SiteDetail>(`/api/sites/${id}`),
 
   getSiteByUrl: (shortUrl: string) =>
-    request<any>(`/api/sites/by-url/${shortUrl}`),
+    request<SiteDetail>(`/api/sites/by-url/${shortUrl}`),
 
   deleteSite: (id: number) =>
-    request<any>(`/api/sites/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/api/sites/${id}`, { method: 'DELETE' }),
+
+  // Site update
+  updateSite: (id: number, data: { name: string; address: string; checklist_items: string[] }) =>
+    request<SiteWithStats>(`/api/sites/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Workers
   addWorkers: (siteId: number, workers: { name: string; phone?: string }[]) =>
-    request<any>(`/api/sites/${siteId}/workers`, {
+    request<{ success: boolean }>(`/api/sites/${siteId}/workers`, {
       method: 'POST',
       body: JSON.stringify({ workers }),
     }),
 
   deleteWorker: (id: number) =>
-    request<any>(`/api/workers/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/api/workers/${id}`, { method: 'DELETE' }),
+
+  // Worker update
+  updateWorker: (id: number, data: { name: string; phone?: string }) =>
+    request<Worker>(`/api/workers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Submissions
-  getSubmissions: (siteId: number) =>
-    request<any[]>(`/api/sites/${siteId}/submissions`),
+  getSubmissions: (siteId: number, page = 1, limit = 20) =>
+    request<{ data: SubmissionWithWorker[]; total: number; page: number; limit: number; totalPages: number }>(
+      `/api/sites/${siteId}/submissions?page=${page}&limit=${limit}`
+    ),
 
   createSubmission: (data: {
     site_id: number;
@@ -118,4 +140,18 @@ export const api = {
   // Export
   downloadCsv: (siteId: number) =>
     request<Blob>(`/api/export/${siteId}/csv`),
+
+  // XLSX export
+  downloadXlsx: (siteId: number) =>
+    request<Blob>(`/api/export/${siteId}/xlsx`),
+
+  // Stats
+  getDailySubmissions: (days = 30) =>
+    request<{ date: string; count: number }[]>(`/api/stats/daily-submissions?days=${days}`),
+
+  getSiteComparison: () =>
+    request<{ id: number; name: string; worker_count: number; submission_count: number }[]>('/api/stats/site-comparison'),
+
+  getComplianceRate: () =>
+    request<{ id: number; name: string; rate: number; total: number }[]>('/api/stats/compliance-rate'),
 };

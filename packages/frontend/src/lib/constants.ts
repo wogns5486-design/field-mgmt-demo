@@ -1,10 +1,1 @@
-export const DEFAULT_CHECKLIST_ITEMS = [
-  '안전모 착용 확인',
-  '안전화 착용 확인',
-  '안전벨트 착용 확인',
-  '작업 전 장비 점검',
-  '소화기 비치 확인',
-  '작업구역 정리정돈',
-  '위험표지판 설치 확인',
-  '안전난간 설치 확인',
-];
+export { DEFAULT_CHECKLIST_ITEMS } from '@field-mgmt/shared';

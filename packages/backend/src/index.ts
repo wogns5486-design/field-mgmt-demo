@@ -7,12 +7,19 @@ import { submissionsRoutes } from './routes/submissions';
 import { uploadRoutes } from './routes/upload';
 import { photosRoutes } from './routes/photos';
 import { exportRoutes } from './routes/export';
+import { notificationsRoutes } from './routes/notifications';
+import { statsRoutes } from './routes/stats';
+import { errorHandler } from './middleware/error-handler';
 
 export type Env = {
   Bindings: {
     DB: D1Database;
     STORAGE: R2Bucket;
     CORS_ORIGIN: string;
+    JWT_SECRET: string;
+  };
+  Variables: {
+    admin: { sub: number; username: string };
   };
 };
 
@@ -38,8 +45,12 @@ app.route('/api/submissions', submissionsRoutes);
 app.route('/api/upload', uploadRoutes);
 app.route('/api/photos', photosRoutes);
 app.route('/api/export', exportRoutes);
+app.route('/api/notifications', notificationsRoutes);
+app.route('/api/stats', statsRoutes);
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok' }));
+
+app.onError(errorHandler);
 
 export default app;

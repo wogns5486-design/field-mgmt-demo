@@ -1,8 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { usePolling } from '@/hooks/usePolling';
 import { formatDate } from '@/lib/utils';
+import { DailySubmissionsChart } from '@/components/charts/DailySubmissionsChart';
+import { SiteComparisonChart } from '@/components/charts/SiteComparisonChart';
+import { ComplianceRateChart } from '@/components/charts/ComplianceRateChart';
 import {
   MapPin,
   Users,
@@ -16,6 +19,16 @@ import {
 export function DashboardPage() {
   const fetchSites = useCallback(() => api.getSites(), []);
   const { data: sites, loading, refresh } = usePolling(fetchSites);
+
+  const [dailyData, setDailyData] = useState<{ date: string; count: number }[]>([]);
+  const [siteComparison, setSiteComparison] = useState<any[]>([]);
+  const [complianceRate, setComplianceRate] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getDailySubmissions(30).then(setDailyData).catch(() => {});
+    api.getSiteComparison().then(setSiteComparison).catch(() => {});
+    api.getComplianceRate().then(setComplianceRate).catch(() => {});
+  }, []);
 
   const copyUrl = (shortUrl: string) => {
     const url = `${window.location.origin}/s/${shortUrl}`;
@@ -99,6 +112,15 @@ export function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 mb-8">
+        <DailySubmissionsChart data={dailyData} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SiteComparisonChart data={siteComparison} />
+          <ComplianceRateChart data={complianceRate} />
+        </div>
+      </div>
 
       {/* Site cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { CheckCircle2, Building2, Loader2 } from 'lucide-react';
@@ -25,7 +26,12 @@ export function WorkerFormPage() {
         setSite(data);
         // Initialize checklist
         const initial: Record<string, boolean> = {};
-        (data.checklist_items || []).forEach((item: string) => {
+        const items: string[] = Array.isArray(data.checklist_items)
+          ? data.checklist_items
+          : typeof data.checklist_items === 'string'
+            ? JSON.parse(data.checklist_items)
+            : [];
+        items.forEach((item: string) => {
           initial[item] = false;
         });
         setChecklist(initial);
@@ -53,7 +59,7 @@ export function WorkerFormPage() {
       });
       setSubmitted(true);
     } catch (err: any) {
-      alert(err.message || '제출에 실패했습니다');
+      toast.error(err.message || '제출 중 오류가 발생했습니다');
     } finally {
       setSubmitting(false);
     }

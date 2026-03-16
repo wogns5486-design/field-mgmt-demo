@@ -39,3 +39,16 @@ CREATE INDEX IF NOT EXISTS idx_submissions_site ON submissions(site_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_worker ON submissions(worker_id);
 CREATE INDEX IF NOT EXISTS idx_sites_short_url ON sites(short_url);
 CREATE INDEX IF NOT EXISTS idx_workers_site ON workers(site_id);
+
+CREATE TABLE IF NOT EXISTS notification_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  site_id INTEGER NOT NULL,
+  message TEXT NOT NULL,
+  recipient_count INTEGER NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'mock',
+  status TEXT NOT NULL DEFAULT 'sent',
+  sent_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_logs_site ON notification_logs(site_id);
